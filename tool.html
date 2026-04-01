@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Briefing Generator — {{config.eventName}}</title>
+<style>
+/* ===== RESET & BASE ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:{{config.primaryColor}};
+  --accent:{{config.accentColor}};
+  --bg:#0F0F13;
+  --surface:#1A1A22;
+  --surface2:#22222E;
+  --surface3:#2A2A38;
+  --border:#2E2E3E;
+  --border2:#3A3A4E;
+  --text:#E8E8F0;
+  --text2:#A0A0B8;
+  --text3:#6A6A88;
+  --success:#22C55E;
+  --warning:#F59E0B;
+  --danger:#EF4444;
+  --radius:8px;
+  --radius-lg:12px;
+  --shadow:0 2px 8px rgba(0,0,0,0.4);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.5);
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;background:var(--bg);color:var(--text);overflow:hidden}
+
+/* ===== APP LAYOUT ===== */
+.app{display:grid;grid-template-rows:56px 1fr;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--border);z-index:100}
+.topbar-logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;color:var(--text)}
+.topbar-logo .badge{background:var(--primary);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.5px}
+.topbar-event{flex:1;text-align:center;font-size:13px;color:var(--text2)}
+.topbar-event strong{color:var(--text)}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+
+.workspace{display:grid;grid-template-columns:300px 1fr 280px;height:calc(100vh - 56px);overflow:hidden}
+
+/* ===== PANELS ===== */
+.panel{overflow-y:auto;border-right:1px solid var(--border);min-height:0;height:100%}
+.panel:last-child{border-right:none;border-left:1px solid var(--border)}
+.panel-header{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;z-index:10;display:flex;align-items:center;justify-content:space-between}
+.panel-header h2{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text2)}
+.panel-body{padding:12px}
+
+/* ===== PREVIEW PANEL ===== */
+.preview-panel{overflow-y:auto;background:var(--bg)}
+.preview-header{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;z-index:10;display:flex;align-items:center;justify-content:space-between}
+.preview-header h2{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text2)}
+.preview-scaler{padding:20px;display:flex;justify-content:center}
+.preview-page{background:#fff;color:#1a1a2e;width:210mm;min-height:297mm;border-radius:4px;box-shadow:var(--shadow-lg);font-family:Georgia,serif;font-size:11pt;line-height:1.5;position:relative}
+
+/* ===== BUTTONS ===== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;text-decoration:none;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover:not(:disabled){filter:brightness(1.15)}
+.btn-secondary{background:var(--surface3);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover:not(:disabled){background:var(--border);border-color:var(--border2)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid transparent}
+.btn-ghost:hover:not(:disabled){background:var(--surface2);color:var(--text)}
+.btn-danger{background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b}
+.btn-danger:hover:not(:disabled){background:#991b1b}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-xs{padding:2px 8px;font-size:11px}
+.btn-icon{width:32px;height:32px;padding:0;justify-content:center;border-radius:var(--radius)}
+
+/* ===== FORM ELEMENTS ===== */
+.form-group{margin-bottom:12px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:var(--text);font-size:13px;font-family:inherit;transition:border-color .15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--primary)}
+.form-textarea{resize:vertical;min-height:60px}
+.form-hint{font-size:11px;color:var(--text3);margin-top:3px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* ===== SECTION ITEMS ===== */
+.section-list{display:flex;flex-direction:column;gap:4px}
+.section-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:grab;transition:all .15s;user-select:none}
+.section-item:active{cursor:grabbing}
+.section-item.dragging{opacity:.5;background:var(--surface3)}
+.section-item.drag-over{border-color:var(--primary);background:rgba(109,40,217,.1)}
+.section-item.disabled{opacity:.5}
+.section-item .drag-handle{color:var(--text3);cursor:grab;font-size:14px;flex-shrink:0}
+.section-item .section-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center}
+.section-item .section-info{flex:1;min-width:0}
+.section-item .section-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.section-item .section-source{font-size:10px;color:var(--text3);margin-top:1px}
+.section-item .section-status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.section-item .section-status.has-data{background:var(--success)}
+.section-item .section-status.no-data{background:var(--text3)}
+.section-toggle{width:36px;height:20px;background:var(--surface3);border:1px solid var(--border);border-radius:10px;position:relative;cursor:pointer;flex-shrink:0;transition:background .15s}
+.section-toggle.on{background:var(--primary);border-color:var(--primary)}
+.section-toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .15s}
+.section-toggle.on::after{transform:translateX(16px)}
+
+/* ===== AUDIENCE PRESETS ===== */
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.preset-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px;text-align:center;cursor:pointer;transition:all .15s}
+.preset-btn:hover{border-color:var(--primary);background:rgba(109,40,217,.1)}
+.preset-btn.active{border-color:var(--primary);background:rgba(109,40,217,.15)}
+.preset-btn .preset-icon{font-size:20px;margin-bottom:4px}
+.preset-btn .preset-label{font-size:11px;font-weight:600;color:var(--text);display:block}
+.preset-btn .preset-count{font-size:10px;color:var(--text3);display:block}
+
+/* ===== DATA SOURCES ===== */
+.source-list{display:flex;flex-direction:column;gap:4px}
+.source-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;display:flex;align-items:center;gap:8px}
+.source-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
+.source-info{flex:1;min-width:0}
+.source-name{font-size:12px;font-weight:600;color:var(--text)}
+.source-detail{font-size:10px;color:var(--text3);margin-top:1px}
+.source-badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;flex-shrink:0}
+.source-badge.ok{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
+.source-badge.empty{background:var(--surface3);color:var(--text3);border:1px solid var(--border)}
+.source-badge.partial{background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
+
+/* ===== ACCORDION ===== */
+.accordion{margin-bottom:8px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.accordion-header{padding:10px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;background:var(--surface2);transition:background .15s}
+.accordion-header:hover{background:var(--surface3)}
+.accordion-header h3{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px}
+.accordion-chevron{color:var(--text3);transition:transform .2s;font-size:12px}
+.accordion-chevron.open{transform:rotate(180deg)}
+.accordion-body{padding:10px 12px;background:var(--surface);display:none}
+.accordion-body.open{display:block}
+
+/* ===== TAGS / CHIPS ===== */
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--text2)}
+.chip.primary{background:rgba(109,40,217,.2);border-color:var(--primary);color:var(--primary)}
+
+/* ===== TOAST ===== */
+#toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--text);box-shadow:var(--shadow-lg);pointer-events:all;animation:slideIn .2s ease;display:flex;align-items:center;gap:8px;max-width:320px}
+.toast.success{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
+.toast.error{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08)}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ===== CUSTOM SECTION EDITOR ===== */
+.custom-section-form{background:var(--surface);border:1px solid var(--primary);border-radius:var(--radius);padding:10px;margin-top:8px}
+
+/* ===== DIVIDER ===== */
+.divider{height:1px;background:var(--border);margin:10px 0}
+.section-group-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);padding:8px 0 4px}
+
+/* ===== SCROLLBARS ===== */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:900px){
+  .workspace{grid-template-columns:1fr}
+  .panel,.preview-panel{overflow:visible;height:auto;border-right:none;border-bottom:1px solid var(--border)}
+  html,body{overflow:auto}
+  .app{overflow:auto;height:auto}
+  .preview-page{width:100%;min-height:unset}
+  .preview-scaler{padding:8px}
+}
+
+/* ===== PRINT STYLES ===== */
+@media print{
+  .app,.workspace,.topbar,.panel,.preview-header,.topbar-actions{display:none!important}
+  #print-frame{display:block!important;position:fixed;top:0;left:0;right:0;bottom:0}
+}
+#print-frame{display:none}
+
+/* ===== EMPTY STATE ===== */
+.empty-state{text-align:center;padding:32px 16px;color:var(--text3)}
+.empty-state .empty-icon{font-size:36px;margin-bottom:8px}
+.empty-state p{font-size:12px;line-height:1.5}
+
+/* ===== MISC ===== */
+.flex{display:flex}
+.items-center{align-items:center}
+.gap-2{gap:8px}
+.gap-1{gap:4px}
+.text-sm{font-size:12px}
+.text-xs{font-size:11px}
+.text-muted{color:var(--text2)}
+.text-dim{color:var(--text3)}
+.font-bold{font-weight:700}
+.w-full{width:100%}
+.mb-1{margin-bottom:4px}
+.mb-2{margin-bottom:8px}
+.mb-3{margin-bottom:12px}
+.mt-2{margin-top:8px}
+.p-2{padding:8px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-logo">
+      📋 <span>Briefing Generator</span>
+      <span class="badge">EVENTHIVE</span>
+    </div>
+    <div class="topbar-event">
+      <strong id="topbar-event-name">{{config.eventName}}</strong>
+      <span id="topbar-event-date" class="text-muted"></span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-secondary btn-sm" onclick="loadSampleData()">🎲 Sample Data</button>
+      <button class="btn btn-secondary btn-sm" onclick="exportHTML()">💾 Export HTML</button>
+      <button class="btn btn-primary btn-sm" onclick="printBrief()">🖨️ Print / PDF</button>
+    </div>
+  </header>
+
+  <!-- 3-PANEL WORKSPACE -->
+  <div class="workspace">
+
+    <!-- LEFT PANEL: SECTIONS & SETTINGS -->
+    <aside class="panel" id="left-panel">
+      <div class="panel-header">
+        <h2>📐 Brief Builder</h2>
+        <button class="btn btn-ghost btn-xs" onclick="toggleLeftSection('presets')" id="toggle-presets-btn">Presets ▸</button>
+      </div>
+      <div class="panel-body">
+
+        <!-- AUDIENCE PRESETS -->
+        <div id="section-presets">
+          <div class="section-group-label">Audience Preset</div>
+          <div class="preset-grid">
+            <div class="preset-btn" id="preset-client" onclick="applyPreset('client')">
+              <div class="preset-icon">🤝</div>
+              <span class="preset-label">Client</span>
+              <span class="preset-count" id="preset-client-count">6 sections</span>
+            </div>
+            <div class="preset-btn" id="preset-crew" onclick="applyPreset('crew')">
+              <div class="preset-icon">🦺</div>
+              <span class="preset-label">Crew</span>
+              <span class="preset-count" id="preset-crew-count">5 sections</span>
+            </div>
+            <div class="preset-btn" id="preset-speaker" onclick="applyPreset('speaker')">
+              <div class="preset-icon">🎤</div>
+              <span class="preset-label">Speaker Pack</span>
+              <span class="preset-count" id="preset-speaker-count">5 sections</span>
+            </div>
+            <div class="preset-btn" id="preset-sponsor" onclick="applyPreset('sponsor')">
+              <div class="preset-icon">💎</div>
+              <span class="preset-label">Sponsor</span>
+              <span class="preset-count" id="preset-sponsor-count">5 sections</span>
+            </div>
+            <div class="preset-btn" id="preset-exhibitor" onclick="applyPreset('exhibitor')">
+              <div class="preset-icon">🏪</div>
+              <span class="preset-label">Exhibitor</span>
+              <span class="preset-count" id="preset-exhibitor-count">5 sections</span>
+            </div>
+            <div class="preset-btn" id="preset-custom" onclick="applyPreset('custom')">
+              <div class="preset-icon">✏️</div>
+              <span class="preset-label">Custom</span>
+              <span class="preset-count">Your choice</span>
+            </div>
+          </div>
+          <div class="divider"></div>
+        </div>
+
+        <!-- SECTION LIST -->
+        <div class="section-group-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Sections</span>
+          <button class="btn btn-ghost btn-xs" onclick="toggleAllSections()" id="toggle-all-btn">Toggle All</button>
+        </div>
+        <div class="section-list" id="section-list">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ADD CUSTOM SECTION -->
+        <div class="section-group-label">Add Custom Section</div>
+        <button class="btn btn-secondary btn-sm w-full" onclick="showCustomSectionForm()" id="add-custom-btn">+ Add Text Section</button>
+        <div id="custom-section-form" class="custom-section-form hidden">
+          <div class="form-group">
+            <label class="form-label">Section Title</label>
+            <input type="text" class="form-input" id="custom-section-title" placeholder="e.g. Special Instructions">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Content</label>
+            <textarea class="form-textarea" id="custom-section-content" rows="4" placeholder="Enter your text here..."></textarea>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="addCustomSection()">Add Section</button>
+            <button class="btn btn-secondary btn-sm" onclick="hideCustomSectionForm()">Cancel</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- SAVE / LOAD TEMPLATE -->
+        <div class="section-group-label">Templates</div>
+        <div class="flex gap-2 mb-2">
+          <input type="text" class="form-input" id="template-name" placeholder="Template name..." style="flex:1">
+          <button class="btn btn-secondary btn-sm" onclick="saveTemplate()">Save</button>
+        </div>
+        <div id="saved-templates-list">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- BRIEF TITLE OVERRIDE -->
+        <div class="form-group">
+          <label class="form-label">Brief Title</label>
+          <input type="text" class="form-input" id="brief-title" placeholder="e.g. Crew Briefing Pack" oninput="renderPreview()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prepared For</label>
+          <input type="text" class="form-input" id="brief-recipient" placeholder="e.g. AV Crew & Technical Team" oninput="renderPreview()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Brief Date</label>
+          <input type="date" class="form-input" id="brief-date" oninput="renderPreview()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Brief Version</label>
+          <input type="text" class="form-input" id="brief-version" value="v1.0" oninput="renderPreview()">
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- CENTRE PANEL: LIVE PREVIEW -->
+    <main class="preview-panel" id="preview-panel">
+      <div class="preview-header">
+        <h2>👁 Live Preview</h2>
+        <div class="flex gap-2 items-center">
+          <span class="text-xs text-dim" id="preview-section-count">0 sections</span>
+          <button class="btn btn-secondary btn-sm" onclick="togglePreviewZoom()" id="zoom-btn">🔍 Fit</button>
+        </div>
+      </div>
+      <div class="preview-scaler" id="preview-scaler">
+        <div class="preview-page" id="preview-page">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL: DATA SOURCES -->
+    <aside class="panel" id="right-panel">
+      <div class="panel-header">
+        <h2>📊 Data Sources</h2>
+        <button class="btn btn-ghost btn-xs" onclick="refreshDataSources()">↻</button>
+      </div>
+      <div class="panel-body">
+        <div class="text-xs text-dim mb-2" id="data-freshness">Scanning localStorage...</div>
+        <div class="source-list" id="source-list">
+          <!-- Populated by JS -->
+        </div>
+        <div class="divider"></div>
+        <div class="section-group-label">Event Slug</div>
+        <input type="text" class="form-input mb-2" id="event-slug-input" placeholder="e.g. techsummit-2026" oninput="updateEventSlug(this.value)">
+        <div class="text-xs text-dim">Change to switch which event's data is loaded.</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- PRINT FRAME (hidden until print) -->
+<div id="print-frame"></div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+// ============================================================
+// CONFIGURATION (injected by EventHive)
+// ============================================================
+const EVENTHIVE_CONFIG = {
+  eventName: '{{config.eventName}}',
+  eventSlug: '{{config.eventSlug}}',
+  eventDate: '{{config.eventDate}}',
+  eventVenue: '{{config.eventVenue}}',
+  eventLocation: '{{config.eventLocation}}',
+  expectedAttendance: {{config.expectedAttendance}},
+  organisingCompany: '{{config.organisingCompany}}',
+  contactName: '{{config.contactName}}',
+  contactEmail: '{{config.contactEmail}}',
+  contactPhone: '{{config.contactPhone}}',
+  emergencyPhone: '{{config.emergencyPhone}}',
+  primaryColor: '{{config.primaryColor}}',
+  accentColor: '{{config.accentColor}}',
+  companyLogo: '{{config.companyLogo}}'
+};
+
+// ============================================================
+// DATA MODEL — SECTION DEFINITIONS
+// ============================================================
+const SECTION_DEFINITIONS = [
+  {
+    id: 'event-overview',
+    name: 'Event Overview',
+    icon: '🎪',
+    source: 'config',
+    sourceLabel: 'Event config',
+    defaultOn: true,
+    order: 0
+  },
+  {
+    id: 'schedule',
+    name: 'Schedule & Run Sheet',
+    icon: '⏱',
+    source: 'runsheet',
+    sourceLabel: 'Run Sheet tool',
+    defaultOn: true,
+    order: 1
+  },
+  {
+    id: 'speakers',
+    name: 'Speaker Programme',
+    icon: '🎤',
+    source: 'programme',
+    sourceLabel: 'Speaker Programme tool',
+    defaultOn: true,
+    order: 2
+  },
+  {
+    id: 'sponsors',
+    name: 'Sponsor Summary',
+    icon: '💎',
+    source: 'sponsors',
+    sourceLabel: 'Sponsor Deliverables tool',
+    defaultOn: true,
+    order: 3
+  },
+  {
+    id: 'budget',
+    name: 'Budget Overview',
+    icon: '💰',
+    source: 'budget',
+    sourceLabel: 'Budget Tracker tool',
+    defaultOn: false,
+    order: 4
+  },
+  {
+    id: 'risks',
+    name: 'Risk Summary',
+    icon: '⚠️',
+    source: 'risks',
+    sourceLabel: 'Risk Assessment tool',
+    defaultOn: false,
+    order: 5
+  },
+  {
+    id: 'registration',
+    name: 'Registration Stats',
+    icon: '🎟',
+    source: 'registration',
+    sourceLabel: 'Registration Manager tool',
+    defaultOn: false,
+    order: 6
+  },
+  {
+    id: 'exhibitors',
+    name: 'Exhibitor Directory',
+    icon: '🏪',
+    source: 'exhibitors',
+    sourceLabel: 'Exhibitor Manager tool',
+    defaultOn: false,
+    order: 7
+  },
+  {
+    id: 'comms',
+    name: 'Communications Plan',
+    icon: '📣',
+    source: 'comms',
+    sourceLabel: 'Comms Timeline tool',
+    defaultOn: false,
+    order: 8
+  },
+  {
+    id: 'tasks',
+    name: 'Outstanding Tasks',
+    icon: '✅',
+    source: 'tasks',
+    sourceLabel: 'Ops Tracker tool',
+    defaultOn: false,
+    order: 9
+  },
+  {
+    id: 'contacts',
+    name: 'Contact Sheet',
+    icon: '📱',
+    source: 'config',
+    sourceLabel: 'Event config',
+    defaultOn: true,
+    order: 10
+  }
+];
+
+// ============================================================
+// AUDIENCE PRESETS
+// ============================================================
+const AUDIENCE_PRESETS = {
+  client: {
+    name: 'Client Briefing',
+    sections: ['event-overview','budget','schedule','risks','sponsors','contacts'],
+    title: 'Client Briefing Pack',
+    recipient: 'Client'
+  },
+  crew: {
+    name: 'Crew Briefing',
+    sections: ['event-overview','schedule','tasks','contacts','risks'],
+    title: 'Crew Briefing Pack',
+    recipient: 'Event Crew & Operations Team'
+  },
+  speaker: {
+    name: 'Speaker Pack',
+    sections: ['event-overview','speakers','schedule','contacts'],
+    title: 'Speaker Information Pack',
+    recipient: 'Speakers & Presenters'
+  },
+  sponsor: {
+    name: 'Sponsor Report',
+    sections: ['event-overview','sponsors','registration','schedule','contacts'],
+    title: 'Sponsor Briefing Pack',
+    recipient: 'Sponsors & Partners'
+  },
+  exhibitor: {
+    name: 'Exhibitor Pack',
+    sections: ['event-overview','exhibitors','schedule','contacts','tasks'],
+    title: 'Exhibitor Information Pack',
+    recipient: 'Exhibitors & Stand Holders'
+  },
+  custom: {
+    name: 'Custom',
+    sections: [],
+    title: '',
+    recipient: ''
+  }
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let state = {
+  eventSlug: EVENTHIVE_CONFIG.eventSlug || 'my-event',
+  activeSections: [],   // array of section ids (ordered)
+  customSections: [],   // { id, name, content }
+  eventData: {},        // aggregated data from all tools
+  activePreset: 'custom',
+  savedTemplates: [],
+  briefTitle: '',
+  briefRecipient: '',
+  briefDate: '',
+  briefVersion: 'v1.0'
+};
+
+// ============================================================
+// STORAGE
+// ============================================================
+const STORAGE_KEY = () => `eventhive_event_${state.eventSlug}_briefings`;
+
+function saveState() {
+  const toSave = {
+    activeSections: state.activeSections,
+    customSections: state.customSections,
+    activePreset: state.activePreset,
+    savedTemplates: state.savedTemplates,
+    briefTitle: state.briefTitle,
+    briefRecipient: state.briefRecipient,
+    briefDate: state.briefDate,
+    briefVersion: state.briefVersion,
+    lastUpdated: new Date().toISOString()
+  };
+  localStorage.setItem(STORAGE_KEY(), JSON.stringify(toSave));
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY());
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    state.activeSections = saved.activeSections || [];
+    state.customSections = saved.customSections || [];
+    state.activePreset = saved.activePreset || 'custom';
+    state.savedTemplates = saved.savedTemplates || [];
+    state.briefTitle = saved.briefTitle || '';
+    state.briefRecipient = saved.briefRecipient || '';
+    state.briefDate = saved.briefDate || '';
+    state.briefVersion = saved.briefVersion || 'v1.0';
+    return true;
+  } catch(e) { return false; }
+}
+
+// ============================================================
+// DATA AGGREGATOR — reads from all tool localStorage keys
+// ============================================================
+const DATA_SOURCES = [
+  { key: 'runsheet',     label: 'Run Sheet',            icon: '⏱', stateKey: 'runsheet' },
+  { key: 'budget',       label: 'Budget Tracker',       icon: '💰', stateKey: 'budget' },
+  { key: 'programme',    label: 'Speaker Programme',    icon: '🎤', stateKey: 'programme' },
+  { key: 'sponsors',     label: 'Sponsor Deliverables', icon: '💎', stateKey: 'sponsors' },
+  { key: 'comms',        label: 'Comms Timeline',       icon: '📣', stateKey: 'comms' },
+  { key: 'registration', label: 'Registration Manager', icon: '🎟', stateKey: 'registration' },
+  { key: 'exhibitors',   label: 'Exhibitor Manager',    icon: '🏪', stateKey: 'exhibitors' },
+  { key: 'leads',        label: 'Lead Capture',         icon: '📇', stateKey: 'leads' },
+  { key: 'tasks',        label: 'Ops Tracker',          icon: '✅', stateKey: 'tasks' },
+  { key: 'risks',        label: 'Risk Assessment',      icon: '⚠️', stateKey: 'risks' }
+];
+
+function aggregateData() {
+  const slug = state.eventSlug;
+  state.eventData = {};
+
+  for (const src of DATA_SOURCES) {
+    const lsKey = `eventhive_event_${slug}_${src.key}`;
+    try {
+      const raw = localStorage.getItem(lsKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        state.eventData[src.stateKey] = parsed;
+      } else {
+        state.eventData[src.stateKey] = null;
+      }
+    } catch(e) {
+      state.eventData[src.stateKey] = null;
+    }
+  }
+}
+
+function getSourceStatus(stateKey) {
+  const data = state.eventData[stateKey];
+  if (!data) return { status: 'empty', count: 0, label: 'No data' };
+
+  // Try to count records intelligently
+  let count = 0;
+  if (Array.isArray(data)) {
+    count = data.length;
+  } else if (typeof data === 'object') {
+    // Try common array keys
+    const arrayKeys = ['cues','tracks','sessions','speakers','items','categories',
+                       'deliverables','sponsors','entries','risks','registrations',
+                       'exhibitors','leads','tasks','events','records'];
+    for (const k of arrayKeys) {
+      if (Array.isArray(data[k])) count += data[k].length;
+    }
+    if (count === 0) {
+      count = Object.keys(data).length;
+    }
+  }
+
+  if (count === 0) return { status: 'empty', count: 0, label: 'No records' };
+  if (count < 3) return { status: 'partial', count, label: `${count} records` };
+  return { status: 'ok', count, label: `${count} records` };
+}
+
+function refreshDataSources() {
+  aggregateData();
+  renderDataSourcesPanel();
+  renderPreview();
+  toast('Data sources refreshed', 'success');
+}
+
+function renderDataSourcesPanel() {
+  const list = document.getElementById('source-list');
+  const freshness = document.getElementById('data-freshness');
+  freshness.textContent = `Last scanned: ${new Date().toLocaleTimeString()}`;
+
+  let html = '';
+  for (const src of DATA_SOURCES) {
+    const status = getSourceStatus(src.stateKey);
+    html += `
+      <div class="source-item">
+        <span class="source-icon">${src.icon}</span>
+        <div class="source-info">
+          <div class="source-name">${src.label}</div>
+          <div class="source-detail">eventhive_event_${state.eventSlug}_${src.key}</div>
+        </div>
+        <span class="source-badge ${status.status}">${status.label}</span>
+      </div>`;
+  }
+  list.innerHTML = html;
+
+  // Update section status dots
+  document.querySelectorAll('.section-item .section-status').forEach(dot => {
+    const sectionId = dot.closest('.section-item')?.dataset.id;
+    const secDef = SECTION_DEFINITIONS.find(s => s.id === sectionId);
+    if (!secDef || secDef.source === 'config') {
+      dot.className = 'section-status has-data';
+    } else {
+      const status = getSourceStatus(secDef.source);
+      dot.className = `section-status ${status.status === 'ok' ? 'has-data' : 'no-data'}`;
+    }
+  });
+}
+
+// ============================================================
+// SECTION LIST UI
+// ============================================================
+function buildSectionId(id) {
+  return `section-item-${id}`;
+}
+
+function renderSectionList() {
+  const list = document.getElementById('section-list');
+
+  // Build ordered list: all SECTION_DEFINITIONS in order, then custom sections
+  const allSections = [
+    ...SECTION_DEFINITIONS,
+    ...state.customSections.map(cs => ({
+      id: cs.id,
+      name: cs.name,
+      icon: '📝',
+      source: 'custom',
+      sourceLabel: 'Custom text',
+      defaultOn: true,
+      order: 999
+    }))
+  ];
+
+  // Sort by active order if available
+  allSections.sort((a, b) => {
+    const ai = state.activeSections.indexOf(a.id);
+    const bi = state.activeSections.indexOf(b.id);
+    if (ai === -1 && bi === -1) return a.order - b.order;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
+  let html = '';
+  for (const sec of allSections) {
+    const isOn = state.activeSections.includes(sec.id);
+    const secDef = SECTION_DEFINITIONS.find(s => s.id === sec.id);
+    const isCustom = sec.source === 'custom';
+
+    let statusClass = 'no-data';
+    if (sec.source === 'config') statusClass = 'has-data';
+    else if (sec.source === 'custom') statusClass = 'has-data';
+    else {
+      const s = getSourceStatus(sec.source);
+      statusClass = s.status === 'ok' ? 'has-data' : 'no-data';
+    }
+
+    html += `
+      <div class="section-item ${isOn ? '' : 'disabled'}"
+           data-id="${sec.id}"
+           draggable="true"
+           id="${buildSectionId(sec.id)}"
+           ondragstart="onDragStart(event)"
+           ondragover="onDragOver(event)"
+           ondrop="onDrop(event)"
+           ondragleave="onDragLeave(event)"
+           ondragend="onDragEnd(event)">
+        <span class="drag-handle">⠿</span>
+        <span class="section-icon">${sec.icon}</span>
+        <div class="section-info">
+          <div class="section-name">${sec.name}</div>
+          <div class="section-source">${sec.sourceLabel}</div>
+        </div>
+        <span class="section-status ${statusClass}" title="${statusClass === 'has-data' ? 'Data available' : 'No data — section will show placeholder'}"></span>
+        <div class="section-toggle ${isOn ? 'on' : ''}" onclick="toggleSection('${sec.id}')"></div>
+        ${isCustom ? `<button class="btn btn-ghost btn-xs" onclick="deleteCustomSection('${sec.id}')" style="padding:2px 4px;font-size:11px" title="Delete">✕</button>` : ''}
+      </div>`;
+  }
+
+  list.innerHTML = html || '<div class="empty-state"><div class="empty-icon">📋</div><p>No sections defined.</p></div>';
+}
+
+function toggleSection(id) {
+  if (state.activeSections.includes(id)) {
+    state.activeSections = state.activeSections.filter(s => s !== id);
+  } else {
+    state.activeSections.push(id);
+  }
+  state.activePreset = 'custom';
+  renderSectionList();
+  renderPreview();
+  saveState();
+}
+
+function toggleAllSections() {
+  const allIds = [...SECTION_DEFINITIONS.map(s => s.id), ...state.customSections.map(c => c.id)];
+  const allOn = allIds.every(id => state.activeSections.includes(id));
+  if (allOn) {
+    state.activeSections = [];
+  } else {
+    state.activeSections = [...allIds];
+  }
+  renderSectionList();
+  renderPreview();
+  saveState();
+}
+
+// ============================================================
+// DRAG & DROP
+// ============================================================
+let dragSrcId = null;
+
+function onDragStart(e) {
+  dragSrcId = e.currentTarget.dataset.id;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  const targetId = e.currentTarget.dataset.id;
+  e.currentTarget.classList.remove('drag-over');
+  if (dragSrcId && targetId && dragSrcId !== targetId) {
+    reorderSections(dragSrcId, targetId);
+  }
+}
+
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.section-item').forEach(el => el.classList.remove('drag-over'));
+}
+
+function reorderSections(fromId, toId) {
+  // Build full ordered list
+  const allIds = [...SECTION_DEFINITIONS.map(s => s.id), ...state.customSections.map(c => c.id)];
+  // Start from activeSections order, filling in inactive ones at their natural positions
+  let ordered = [];
+  const inActive = state.activeSections.filter(id => allIds.includes(id));
+  const notActive = allIds.filter(id => !inActive.includes(id));
+
+  // Combine for ordering purposes
+  let combined = [...inActive, ...notActive];
+
+  const fromIdx = combined.indexOf(fromId);
+  const toIdx = combined.indexOf(toId);
+  if (fromIdx === -1 || toIdx === -1) return;
+
+  combined.splice(fromIdx, 1);
+  combined.splice(toIdx, 0, fromId);
+
+  // Update activeSections order to match
+  state.activeSections = combined.filter(id => state.activeSections.includes(id));
+
+  renderSectionList();
+  renderPreview();
+  saveState();
+}
+
+// ============================================================
+// CUSTOM SECTIONS
+// ============================================================
+function showCustomSectionForm() {
+  document.getElementById('custom-section-form').classList.remove('hidden');
+  document.getElementById('add-custom-btn').classList.add('hidden');
+}
+
+function hideCustomSectionForm() {
+  document.getElementById('custom-section-form').classList.add('hidden');
+  document.getElementById('add-custom-btn').classList.remove('hidden');
+  document.getElementById('custom-section-title').value = '';
+  document.getElementById('custom-section-content').value = '';
+}
+
+function addCustomSection() {
+  const title = document.getElementById('custom-section-title').value.trim();
+  const content = document.getElementById('custom-section-content').value.trim();
+  if (!title) { toast('Please enter a section title', 'error'); return; }
+  const id = `custom-${Date.now()}`;
+  state.customSections.push({ id, name: title, content });
+  state.activeSections.push(id);
+  hideCustomSectionForm();
+  renderSectionList();
+  renderPreview();
+  saveState();
+  toast('Custom section added', 'success');
+}
+
+function deleteCustomSection(id) {
+  state.customSections = state.customSections.filter(c => c.id !== id);
+  state.activeSections = state.activeSections.filter(s => s !== id);
+  renderSectionList();
+  renderPreview();
+  saveState();
+}
+
+// ============================================================
+// AUDIENCE PRESETS
+// ============================================================
+function applyPreset(presetId) {
+  const preset = AUDIENCE_PRESETS[presetId];
+  if (!preset) return;
+  state.activePreset = presetId;
+
+  if (presetId !== 'custom') {
+    state.activeSections = [...preset.sections];
+    if (preset.title && !state.briefTitle) {
+      state.briefTitle = preset.title;
+      document.getElementById('brief-title').value = preset.title;
+    }
+    if (preset.recipient && !state.briefRecipient) {
+      state.briefRecipient = preset.recipient;
+      document.getElementById('brief-recipient').value = preset.recipient;
+    }
+    toast(`Preset "${preset.name}" applied`, 'success');
+  }
+
+  // Update preset button highlights
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`preset-${presetId}`)?.classList.add('active');
+
+  renderSectionList();
+  renderPreview();
+  saveState();
+}
+
+// ============================================================
+// SAVED TEMPLATES
+// ============================================================
+function saveTemplate() {
+  const name = document.getElementById('template-name').value.trim();
+  if (!name) { toast('Enter a template name', 'error'); return; }
+  const tmpl = {
+    id: `tmpl-${Date.now()}`,
+    name,
+    sections: [...state.activeSections],
+    briefTitle: state.briefTitle,
+    briefRecipient: state.briefRecipient,
+    savedAt: new Date().toISOString()
+  };
+  // Replace if same name exists
+  state.savedTemplates = state.savedTemplates.filter(t => t.name !== name);
+  state.savedTemplates.push(tmpl);
+  document.getElementById('template-name').value = '';
+  renderSavedTemplates();
+  saveState();
+  toast(`Template "${name}" saved`, 'success');
+}
+
+function loadTemplate(id) {
+  const tmpl = state.savedTemplates.find(t => t.id === id);
+  if (!tmpl) return;
+  state.activeSections = [...tmpl.sections];
+  state.briefTitle = tmpl.briefTitle || '';
+  state.briefRecipient = tmpl.briefRecipient || '';
+  document.getElementById('brief-title').value = state.briefTitle;
+  document.getElementById('brief-recipient').value = state.briefRecipient;
+  state.activePreset = 'custom';
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('preset-custom')?.classList.add('active');
+  renderSectionList();
+  renderPreview();
+  toast(`Template "${tmpl.name}" loaded`, 'success');
+}
+
+function deleteTemplate(id) {
+  state.savedTemplates = state.savedTemplates.filter(t => t.id !== id);
+  renderSavedTemplates();
+  saveState();
+}
+
+function renderSavedTemplates() {
+  const el = document.getElementById('saved-templates-list');
+  if (state.savedTemplates.length === 0) {
+    el.innerHTML = '<div class="text-xs text-dim">No saved templates yet.</div>';
+    return;
+  }
+  el.innerHTML = state.savedTemplates.map(t => `
+    <div class="flex items-center gap-1 mb-1">
+      <button class="btn btn-ghost btn-xs" style="flex:1;text-align:left;justify-content:flex-start;overflow:hidden;text-overflow:ellipsis" onclick="loadTemplate('${t.id}')" title="${t.name}">
+        📄 ${escHtml(t.name)}
+      </button>
+      <button class="btn btn-ghost btn-xs" onclick="deleteTemplate('${t.id}')" title="Delete template" style="padding:2px 5px;flex-shrink:0">✕</button>
+    </div>`).join('');
+}
+
+// ============================================================
+// MISC UI HELPERS
+// ============================================================
+function updateEventSlug(val) {
+  state.eventSlug = val.trim() || 'my-event';
+  aggregateData();
+  renderDataSourcesPanel();
+  renderSectionList();
+  renderPreview();
+}
+
+function togglePreviewZoom() {
+  const scaler = document.getElementById('preview-scaler');
+  const btn = document.getElementById('zoom-btn');
+  if (scaler.style.transform === 'scale(0.7)' || scaler.dataset.zoomed === '1') {
+    scaler.style.transform = '';
+    scaler.dataset.zoomed = '0';
+    btn.textContent = '🔍 Fit';
+  } else {
+    scaler.style.transform = 'scale(0.7)';
+    scaler.style.transformOrigin = 'top center';
+    scaler.dataset.zoomed = '1';
+    btn.textContent = '🔍 100%';
+  }
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${escHtml(msg)}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function printBrief() {
+  const html = buildPrintableHTML();
+  const frame = document.getElementById('print-frame');
+  frame.innerHTML = '';
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:99999;background:#fff';
+  iframe.srcdoc = html;
+  frame.appendChild(iframe);
+  iframe.onload = () => {
+    iframe.contentWindow.print();
+    setTimeout(() => { iframe.remove(); }, 1000);
+  };
+}
+
+function exportHTML() {
+  const html = buildPrintableHTML();
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const slug = state.eventSlug;
+  const title = state.briefTitle || 'briefing';
+  a.href = url;
+  a.download = `${slug}-${title.toLowerCase().replace(/\s+/g,'-')}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('HTML exported', 'success');
+}
+
+function buildPrintableHTML() {
+  const content = document.getElementById('preview-page').innerHTML;
+  const primary = EVENTHIVE_CONFIG.primaryColor || '#6D28D9';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${escHtml(state.briefTitle || EVENTHIVE_CONFIG.eventName + ' Briefing')}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,'Times New Roman',serif;font-size:11pt;line-height:1.5;color:#1a1a2e;background:#fff;padding:0}
+.brief-page{max-width:210mm;margin:0 auto;padding:20mm 18mm}
+@media print{
+  body{padding:0}
+  .brief-page{max-width:none;padding:15mm 18mm}
+  .brief-section{page-break-inside:avoid}
+  .page-break{page-break-before:always}
+  @page{size:A4;margin:15mm 18mm}
+}
+h1{font-size:24pt;color:${primary};margin-bottom:6pt}
+h2{font-size:16pt;color:${primary};border-bottom:2pt solid ${primary};padding-bottom:4pt;margin:20pt 0 12pt}
+h3{font-size:12pt;font-weight:bold;margin:12pt 0 6pt}
+p{margin-bottom:8pt}
+table{width:100%;border-collapse:collapse;margin:8pt 0;font-size:10pt}
+th{background:${primary};color:#fff;padding:6pt 8pt;text-align:left;font-size:9pt}
+td{padding:5pt 8pt;border-bottom:1pt solid #e2e2e2;vertical-align:top}
+tr:nth-child(even) td{background:#f9f9f9}
+.brief-header{background:${primary};color:#fff;padding:24pt 28pt;margin-bottom:0}
+.brief-header h1{color:#fff;margin-bottom:4pt}
+.brief-header .meta{font-size:9pt;opacity:.85;margin-top:8pt;display:grid;grid-template-columns:1fr 1fr;gap:4pt}
+.brief-section{margin-bottom:24pt;padding:0}
+.no-data-note{background:#f9f9f9;border:1pt solid #e2e2e2;border-radius:4pt;padding:10pt;color:#666;font-size:9pt;font-style:italic}
+.toc{margin:16pt 0;padding:12pt;background:#f5f5ff;border-left:4pt solid ${primary}}
+.toc h3{color:${primary};margin-bottom:8pt}
+.toc-item{display:flex;justify-content:space-between;padding:3pt 0;border-bottom:1pt dotted #ccc;font-size:10pt}
+.chip-row{display:flex;flex-wrap:wrap;gap:6pt;margin:6pt 0}
+.chip{display:inline-block;background:#f0eeff;border:1pt solid #d4cafe;border-radius:20pt;padding:2pt 8pt;font-size:9pt;color:#4c1d95}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8pt;margin:8pt 0}
+.stat-box{background:#f5f5ff;border:1pt solid #e0e7ff;border-radius:4pt;padding:8pt;text-align:center}
+.stat-box .stat-val{font-size:18pt;font-weight:bold;color:${primary}}
+.stat-box .stat-lbl{font-size:8pt;color:#666;margin-top:2pt}
+.badge{display:inline-block;padding:1pt 6pt;border-radius:10pt;font-size:8pt;font-weight:bold}
+.badge-green{background:#dcfce7;color:#166534}
+.badge-amber{background:#fef3c7;color:#92400e}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-blue{background:#dbeafe;color:#1e40af}
+</style>
+</head>
+<body>
+<div class="brief-page">
+${content}
+</div>
+</body>
+</html>`;
+}
+
+// ============================================================
+// SAMPLE DATA SEEDER
+// ============================================================
+function loadSampleData() {
+  const slug = state.eventSlug || 'techsummit-2026';
+  seedAllToolData(slug);
+  aggregateData();
+  renderDataSourcesPanel();
+  renderSectionList();
+  renderPreview();
+  toast('Sample data loaded for all tools', 'success');
+}
+
+function seedAllToolData(slug) {
+  // RUN SHEET
+  localStorage.setItem(`eventhive_event_${slug}_runsheet`, JSON.stringify({
+    tracks: [
+      { id: 't1', name: 'Main Stage', color: '#6D28D9' },
+      { id: 't2', name: 'Breakout A', color: '#2563EB' },
+      { id: 't3', name: 'Breakout B', color: '#059669' }
+    ],
+    cues: [
+      { id: 'c1', trackId: 't1', label: 'Doors Open', time: '08:30', duration: 30, type: 'logistics', notes: 'Registration desks open. Welcome signage active.' },
+      { id: 'c2', trackId: 't1', label: 'Opening Keynote — Dr Sarah Chen', time: '09:30', duration: 45, type: 'session', notes: 'AV: slides + lapel mic. Check confidence monitors.' },
+      { id: 'c3', trackId: 't2', label: 'Workshop: AI in Events', time: '10:30', duration: 60, type: 'session', notes: 'Max 40 pax. Laptop power strips required.' },
+      { id: 'c4', trackId: 't1', label: 'Panel: Future of Events', time: '11:30', duration: 60, type: 'session', notes: '5 panellists. Round table setup.' },
+      { id: 'c5', trackId: 't1', label: 'Networking Lunch', time: '12:30', duration: 90, type: 'break', notes: 'Catering in Atrium. Dietary reqs: 12 vegan, 4 GF.' },
+      { id: 'c6', trackId: 't3', label: 'Workshop: Sustainability', time: '14:00', duration: 60, type: 'session', notes: 'Interactive format. Whiteboard required.' },
+      { id: 'c7', trackId: 't1', label: 'Closing Keynote — Alex Rivera', time: '15:30', duration: 40, type: 'session', notes: 'Live demo component. Test internet connection.' },
+      { id: 'c8', trackId: 't1', label: 'Evening Reception', time: '17:00', duration: 120, type: 'social', notes: 'Drinks & canapés in Exhibition Hall.' }
+    ]
+  }));
+
+  // BUDGET
+  localStorage.setItem(`eventhive_event_${slug}_budget`, JSON.stringify({
+    categories: [
+      { id: 'b1', name: 'Venue & Catering', colour: '#6D28D9' },
+      { id: 'b2', name: 'AV & Production', colour: '#2563EB' },
+      { id: 'b3', name: 'Marketing', colour: '#059669' },
+      { id: 'b4', name: 'Staffing', colour: '#D97706' },
+      { id: 'b5', name: 'Speakers', colour: '#DC2626' }
+    ],
+    items: [
+      { id: 'i1', categoryId: 'b1', name: 'Venue hire (full day)', budgeted: 12000, actual: 11800, status: 'invoiced', supplier: 'ExCeL London' },
+      { id: 'i2', categoryId: 'b1', name: 'Catering — lunch + breaks', budgeted: 8500, actual: 8750, status: 'invoiced', supplier: 'Levy Restaurants' },
+      { id: 'i3', categoryId: 'b2', name: 'AV production', budgeted: 15000, actual: 14200, status: 'invoiced', supplier: 'Stage Audio Visual' },
+      { id: 'i4', categoryId: 'b2', name: 'Livestream setup', budgeted: 3500, actual: 0, status: 'budgeted', supplier: 'TBC' },
+      { id: 'i5', categoryId: 'b3', name: 'Digital marketing', budgeted: 4000, actual: 3800, status: 'paid', supplier: 'Internal' },
+      { id: 'i6', categoryId: 'b3', name: 'Print & signage', budgeted: 2000, actual: 1950, status: 'paid', supplier: 'PrintPro' },
+      { id: 'i7', categoryId: 'b4', name: 'Event staff (10 pax)', budgeted: 5000, actual: 5200, status: 'confirmed', supplier: 'EventStaff UK' },
+      { id: 'i8', categoryId: 'b5', name: 'Keynote fees (2)', budgeted: 6000, actual: 6000, status: 'paid', supplier: 'Various' }
+    ]
+  }));
+
+  // SPEAKER PROGRAMME
+  localStorage.setItem(`eventhive_event_${slug}_programme`, JSON.stringify({
+    speakers: [
+      { id: 's1', name: 'Dr Sarah Chen', title: 'CEO, FutureTech Labs', bio: 'Pioneer in AI applications for live events. Author of 3 books on event technology.', session: 'Opening Keynote', time: '09:30', room: 'Main Stage', travel: 'Train from Edinburgh', hotel: 'The Westin London City' },
+      { id: 's2', name: 'Alex Rivera', title: 'Head of Sustainability, EventEco', bio: 'Leading voice on sustainable events. Delivered 200+ carbon-neutral events.', session: 'Closing Keynote', time: '15:30', room: 'Main Stage', travel: 'Flight from Barcelona', hotel: 'The Westin London City' },
+      { id: 's3', name: 'Jamie Thompson', title: 'Partner, Strategy Co.', bio: 'Workshop facilitator specialising in event ROI and measurement.', session: 'Workshop: AI in Events', time: '10:30', room: 'Breakout A', travel: 'Local', hotel: 'N/A' },
+      { id: 's4', name: 'Priya Patel', title: 'VP Operations, Confex Group', bio: '20 years in conference operations. Panel moderator.', session: 'Panel: Future of Events', time: '11:30', room: 'Main Stage', travel: 'Tube', hotel: 'N/A' },
+      { id: 's5', name: 'Marcus Wilson', title: 'Founder, GreenEvents', bio: 'Sustainability consultant. Workshop on carbon-neutral events.', session: 'Workshop: Sustainability', time: '14:00', room: 'Breakout B', travel: 'Train from Manchester', hotel: 'Canary Wharf Marriott' }
+    ]
+  }));
+
+  // SPONSOR DELIVERABLES
+  localStorage.setItem(`eventhive_event_${slug}_sponsors`, JSON.stringify({
+    sponsors: [
+      { id: 'sp1', name: 'TechCorp Ltd', tier: 'Platinum', value: 25000, logoUrl: '', items: [
+        { desc: 'Main stage logo backdrop', status: 'delivered' },
+        { desc: 'Opening keynote title sponsor', status: 'delivered' },
+        { desc: 'Premium exhibition stand (6×3m)', status: 'in-progress' },
+        { desc: 'Full-page brochure ad', status: 'delivered' }
+      ]},
+      { id: 'sp2', name: 'Innovate Partners', tier: 'Gold', value: 12000, logoUrl: '', items: [
+        { desc: 'Networking lunch sponsor', status: 'delivered' },
+        { desc: 'Exhibition stand (3×3m)', status: 'confirmed' },
+        { desc: 'Half-page brochure ad', status: 'pending' }
+      ]},
+      { id: 'sp3', name: 'StartupHub', tier: 'Silver', value: 5000, logoUrl: '', items: [
+        { desc: 'Exhibition table-top stand', status: 'confirmed' },
+        { desc: 'Logo on website', status: 'delivered' }
+      ]}
+    ]
+  }));
+
+  // COMMS TIMELINE
+  localStorage.setItem(`eventhive_event_${slug}_comms`, JSON.stringify({
+    entries: [
+      { id: 'cm1', title: 'Save the Date', channel: 'Email', audience: 'All contacts', date: '2026-06-01', status: 'sent' },
+      { id: 'cm2', title: 'Registration Open announcement', channel: 'Email + Social', audience: 'Network', date: '2026-06-15', status: 'sent' },
+      { id: 'cm3', title: 'Speaker announcement #1', channel: 'Social + Press release', audience: 'Public', date: '2026-07-01', status: 'sent' },
+      { id: 'cm4', title: 'Early Bird deadline reminder', channel: 'Email', audience: 'Partial registrants', date: '2026-07-20', status: 'scheduled' },
+      { id: 'cm5', title: 'Full programme reveal', channel: 'Email + Social', audience: 'All', date: '2026-08-01', status: 'draft' },
+      { id: 'cm6', title: '1-week-to-go email', channel: 'Email', audience: 'Registered attendees', date: '2026-09-08', status: 'draft' },
+      { id: 'cm7', title: 'Day-before logistics reminder', channel: 'Email', audience: 'Registered attendees', date: '2026-09-14', status: 'draft' }
+    ]
+  }));
+
+  // REGISTRATION
+  localStorage.setItem(`eventhive_event_${slug}_registration`, JSON.stringify({
+    summary: { totalRegistered: 347, totalCapacity: 400, checkedIn: 0 },
+    categories: [
+      { name: 'Standard Delegate', registered: 210, capacity: 280, price: 395 },
+      { name: 'VIP / Speaker', registered: 22, capacity: 30, price: 0 },
+      { name: 'Exhibitor Pass', registered: 45, capacity: 60, price: 150 },
+      { name: 'Sponsor Pass', registered: 30, capacity: 30, price: 0 },
+      { name: 'Press Pass', registered: 12, capacity: 20, price: 0 },
+      { name: 'Staff', registered: 28, capacity: 40, price: 0 }
+    ],
+    dietary: { vegan: 12, vegetarian: 34, glutenFree: 8, halal: 6, kosher: 2, other: 5 }
+  }));
+
+  // EXHIBITORS
+  localStorage.setItem(`eventhive_event_${slug}_exhibitors`, JSON.stringify({
+    exhibitors: [
+      { id: 'ex1', company: 'TechCorp Ltd', stand: 'A1', size: '6×3m', type: 'Platinum', contact: 'John Davies', contactEmail: 'john@techcorp.com', setupTime: '07:00', breakdownTime: '19:00', notes: 'Requires 32A power supply' },
+      { id: 'ex2', company: 'Innovate Partners', stand: 'B2', size: '3×3m', type: 'Gold', contact: 'Sarah Miles', contactEmail: 's.miles@innovate.com', setupTime: '08:00', breakdownTime: '18:00', notes: '' },
+      { id: 'ex3', company: 'StartupHub', stand: 'C5', size: 'Table-top', type: 'Silver', contact: 'Tom Brown', contactEmail: 'tom@startuphub.io', setupTime: '08:30', breakdownTime: '17:30', notes: '' },
+      { id: 'ex4', company: 'EventTech Solutions', stand: 'C6', size: 'Table-top', type: 'Standard', contact: 'Amy Green', contactEmail: 'amy@eventtech.co', setupTime: '08:30', breakdownTime: '17:30', notes: '' },
+      { id: 'ex5', company: 'Media Inc', stand: 'D1', size: '3×2m', type: 'Standard', contact: 'Mark Patel', contactEmail: 'mark@mediainc.com', setupTime: '08:00', breakdownTime: '18:00', notes: 'TV screen required — bring own' }
+    ]
+  }));
+
+  // TASKS (OPS TRACKER)
+  localStorage.setItem(`eventhive_event_${slug}_tasks`, JSON.stringify({
+    tasks: [
+      { id: 'tk1', title: 'Confirm final headcount with caterer', status: 'outstanding', owner: 'Emma', due: '2026-09-12', priority: 'high' },
+      { id: 'tk2', title: 'Send speaker briefing packs', status: 'outstanding', owner: 'Richard', due: '2026-09-10', priority: 'high' },
+      { id: 'tk3', title: 'Brief security team on VIP movement', status: 'outstanding', owner: 'Tom', due: '2026-09-13', priority: 'medium' },
+      { id: 'tk4', title: 'Test AV rig in main hall', status: 'complete', owner: 'AV Team', due: '2026-09-14', priority: 'high' },
+      { id: 'tk5', title: 'Print badges and lanyards', status: 'in-progress', owner: 'Emma', due: '2026-09-12', priority: 'high' },
+      { id: 'tk6', title: 'Confirm parking allocation for speakers', status: 'complete', owner: 'Richard', due: '2026-09-10', priority: 'low' },
+      { id: 'tk7', title: 'Upload slides to presentation server', status: 'outstanding', owner: 'Speakers', due: '2026-09-13', priority: 'medium' },
+      { id: 'tk8', title: 'Set up registration scanners', status: 'outstanding', owner: 'RegTeam', due: '2026-09-14', priority: 'high' }
+    ]
+  }));
+
+  // RISKS
+  localStorage.setItem(`eventhive_event_${slug}_risks`, JSON.stringify({
+    risks: [
+      { id: 'r1', title: 'AV system failure during keynote', likelihood: 'low', impact: 'critical', mitigation: 'Backup laptop and spare HDMI cables. Test on site morning of event.', status: 'mitigated' },
+      { id: 'r2', title: 'Low attendance (< 70% capacity)', likelihood: 'medium', impact: 'high', mitigation: 'Targeted email campaign week before. Complimentary ticket offer to waitlist.', status: 'in-progress' },
+      { id: 'r3', title: 'Catering delivery delayed', likelihood: 'low', impact: 'medium', mitigation: 'Secondary caterer on standby. Buffer in lunch schedule.', status: 'mitigated' },
+      { id: 'r4', title: 'Speaker cancellation < 72 hours', likelihood: 'low', impact: 'high', mitigation: 'Backup speaker for each session. Pre-recorded video as fallback.', status: 'active' },
+      { id: 'r5', title: 'Fire alarm / evacuation', likelihood: 'very-low', impact: 'critical', mitigation: 'Evacuation plan briefed to all staff. Assembly point: Car Park B.', status: 'mitigated' }
+    ]
+  }));
+}
+
+// ============================================================
+// SECTION RENDERERS — BG.02 Template System
+// ============================================================
+function renderSection(sectionId) {
+  const data = state.eventData;
+  const cfg = EVENTHIVE_CONFIG;
+
+  switch(sectionId) {
+    case 'event-overview': return renderEventOverview(cfg);
+    case 'schedule':       return renderSchedule(data.runsheet);
+    case 'speakers':       return renderSpeakers(data.programme);
+    case 'sponsors':       return renderSponsors(data.sponsors);
+    case 'budget':         return renderBudget(data.budget);
+    case 'risks':          return renderRisks(data.risks);
+    case 'registration':   return renderRegistration(data.registration);
+    case 'exhibitors':     return renderExhibitors(data.exhibitors);
+    case 'comms':          return renderComms(data.comms);
+    case 'tasks':          return renderTasks(data.tasks);
+    case 'contacts':       return renderContacts(cfg);
+    default: {
+      // Check custom sections
+      const custom = state.customSections.find(c => c.id === sectionId);
+      if (custom) return renderCustomSection(custom);
+      return '';
+    }
+  }
+}
+
+function noDataNote(toolName) {
+  return `<div class="no-data-note">⚠ No data available from ${escHtml(toolName)}. Please configure and populate the tool, then refresh the brief.</div>`;
+}
+
+function renderEventOverview(cfg) {
+  const attendance = cfg.expectedAttendance ? `<strong>${Number(cfg.expectedAttendance).toLocaleString()}</strong>` : '—';
+  return `
+<h2>Event Overview</h2>
+<div class="stat-grid" style="margin-bottom:12pt">
+  <div class="stat-box">
+    <div class="stat-val">${escHtml(cfg.eventDate || '—')}</div>
+    <div class="stat-lbl">Event Date(s)</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val">${attendance}</div>
+    <div class="stat-lbl">Expected Attendees</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val">${escHtml(cfg.eventVenue || '—')}</div>
+    <div class="stat-lbl">Venue</div>
+  </div>
+</div>
+<table>
+  <tr><th style="width:35%">Detail</th><th>Information</th></tr>
+  <tr><td><strong>Event Name</strong></td><td>${escHtml(cfg.eventName)}</td></tr>
+  <tr><td><strong>Date(s)</strong></td><td>${escHtml(cfg.eventDate || 'To be confirmed')}</td></tr>
+  <tr><td><strong>Venue</strong></td><td>${escHtml(cfg.eventVenue || 'To be confirmed')}</td></tr>
+  <tr><td><strong>Address</strong></td><td>${escHtml(cfg.eventLocation || 'To be confirmed')}</td></tr>
+  <tr><td><strong>Expected Attendance</strong></td><td>${attendance}</td></tr>
+  <tr><td><strong>Organiser</strong></td><td>${escHtml(cfg.organisingCompany)}</td></tr>
+  <tr><td><strong>Primary Contact</strong></td><td>${escHtml(cfg.contactName || '—')}${cfg.contactPhone ? ' · ' + escHtml(cfg.contactPhone) : ''}</td></tr>
+  <tr><td><strong>On-Site Emergency</strong></td><td>${escHtml(cfg.emergencyPhone || cfg.contactPhone || '—')}</td></tr>
+</table>`;
+}
+
+function renderSchedule(runsheet) {
+  if (!runsheet || (!runsheet.cues && !Array.isArray(runsheet))) {
+    return `<h2>Schedule & Run Sheet</h2>${noDataNote('Run Sheet tool')}`;
+  }
+  const cues = runsheet.cues || runsheet;
+  const tracks = runsheet.tracks || [];
+
+  if (!cues || cues.length === 0) {
+    return `<h2>Schedule & Run Sheet</h2>${noDataNote('Run Sheet tool')}`;
+  }
+
+  // Sort by time
+  const sorted = [...cues].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+  let html = `<h2>Schedule & Run Sheet</h2>
+<table>
+  <tr><th style="width:70pt">Time</th><th style="width:60pt">Room/Track</th><th>Session</th><th style="width:50pt">Duration</th></tr>`;
+
+  for (const cue of sorted) {
+    const track = tracks.find(t => t.id === cue.trackId);
+    const trackName = track ? track.name : (cue.track || '—');
+    const typeEmoji = cue.type === 'session' ? '' : cue.type === 'break' ? '☕ ' : cue.type === 'social' ? '🥂 ' : cue.type === 'logistics' ? '🚪 ' : '';
+    const duration = cue.duration ? `${cue.duration} min` : '—';
+    html += `<tr>
+      <td><strong>${escHtml(cue.time || '—')}</strong></td>
+      <td>${escHtml(trackName)}</td>
+      <td>${typeEmoji}${escHtml(cue.label || cue.title || '—')}${cue.notes ? `<br><small style="color:#666">${escHtml(cue.notes)}</small>` : ''}</td>
+      <td>${duration}</td>
+    </tr>`;
+  }
+  return html + '</table>';
+}
+
+function renderSpeakers(programme) {
+  if (!programme || !programme.speakers || programme.speakers.length === 0) {
+    return `<h2>Speaker Programme</h2>${noDataNote('Speaker Programme tool')}`;
+  }
+
+  let html = `<h2>Speaker Programme</h2>
+<table>
+  <tr><th>Speaker</th><th>Organisation</th><th>Session</th><th>Time</th><th>Room</th></tr>`;
+
+  for (const s of programme.speakers) {
+    html += `<tr>
+      <td><strong>${escHtml(s.name || '—')}</strong>${s.bio ? `<br><small style="color:#666">${escHtml(s.bio.substring(0,100))}${s.bio.length > 100 ? '…' : ''}</small>` : ''}</td>
+      <td>${escHtml(s.title || s.organisation || '—')}</td>
+      <td>${escHtml(s.session || '—')}</td>
+      <td>${escHtml(s.time || '—')}</td>
+      <td>${escHtml(s.room || '—')}</td>
+    </tr>`;
+  }
+  return html + '</table>';
+}
+
+function renderSponsors(sponsors) {
+  if (!sponsors || !sponsors.sponsors || sponsors.sponsors.length === 0) {
+    return `<h2>Sponsor Summary</h2>${noDataNote('Sponsor Deliverables tool')}`;
+  }
+
+  const total = sponsors.sponsors.reduce((sum, s) => sum + (Number(s.value) || 0), 0);
+
+  let html = `<h2>Sponsor Summary</h2>
+<p>Total sponsorship value: <strong>£${total.toLocaleString()}</strong> across <strong>${sponsors.sponsors.length} sponsors</strong>.</p>`;
+
+  for (const sp of sponsors.sponsors) {
+    const deliveredCount = (sp.items || []).filter(i => i.status === 'delivered').length;
+    const totalItems = (sp.items || []).length;
+    const pct = totalItems > 0 ? Math.round(deliveredCount / totalItems * 100) : 0;
+    html += `
+<h3>${escHtml(sp.name)} <span class="badge ${sp.tier === 'Platinum' ? 'badge-blue' : sp.tier === 'Gold' ? 'badge-amber' : 'badge-green'}">${escHtml(sp.tier)}</span></h3>
+<table>
+  <tr><th>Deliverable</th><th style="width:80pt">Status</th></tr>`;
+    for (const item of (sp.items || [])) {
+      const badgeClass = item.status === 'delivered' ? 'badge-green' : item.status === 'in-progress' ? 'badge-amber' : 'badge-red';
+      html += `<tr><td>${escHtml(item.desc)}</td><td><span class="badge ${badgeClass}">${escHtml(item.status)}</span></td></tr>`;
+    }
+    html += `</table>`;
+  }
+  return html;
+}
+
+function renderBudget(budget) {
+  if (!budget || !budget.items || budget.items.length === 0) {
+    return `<h2>Budget Overview</h2>${noDataNote('Budget Tracker tool')}`;
+  }
+
+  const totalBudgeted = budget.items.reduce((s, i) => s + (Number(i.budgeted) || 0), 0);
+  const totalActual = budget.items.reduce((s, i) => s + (Number(i.actual) || 0), 0);
+  const variance = totalBudgeted - totalActual;
+
+  let html = `<h2>Budget Overview</h2>
+<div class="stat-grid">
+  <div class="stat-box">
+    <div class="stat-val">£${totalBudgeted.toLocaleString()}</div>
+    <div class="stat-lbl">Total Budget</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val">£${totalActual.toLocaleString()}</div>
+    <div class="stat-lbl">Actual Spend</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val" style="color:${variance >= 0 ? 'green' : 'red'}">${variance >= 0 ? '+' : ''}£${variance.toLocaleString()}</div>
+    <div class="stat-lbl">Variance</div>
+  </div>
+</div>
+<table>
+  <tr><th>Line Item</th><th>Supplier</th><th>Budgeted</th><th>Actual</th><th>Status</th></tr>`;
+
+  for (const item of budget.items) {
+    const v = (Number(item.budgeted) || 0) - (Number(item.actual) || 0);
+    const statusBadge = item.status === 'paid' ? 'badge-green' : item.status === 'invoiced' ? 'badge-amber' : 'badge-blue';
+    html += `<tr>
+      <td>${escHtml(item.name)}</td>
+      <td>${escHtml(item.supplier || '—')}</td>
+      <td>£${(Number(item.budgeted)||0).toLocaleString()}</td>
+      <td>£${(Number(item.actual)||0).toLocaleString()}</td>
+      <td><span class="badge ${statusBadge}">${escHtml(item.status || '—')}</span></td>
+    </tr>`;
+  }
+
+  return html + `<tr style="font-weight:bold"><td colspan="2">Total</td><td>£${totalBudgeted.toLocaleString()}</td><td>£${totalActual.toLocaleString()}</td><td></td></tr></table>`;
+}
+
+function renderRisks(risks) {
+  if (!risks || !risks.risks || risks.risks.length === 0) {
+    return `<h2>Risk Summary</h2>${noDataNote('Risk Assessment tool')}`;
+  }
+
+  let html = `<h2>Risk Summary</h2>
+<table>
+  <tr><th>Risk</th><th style="width:65pt">Likelihood</th><th style="width:65pt">Impact</th><th>Mitigation</th><th style="width:70pt">Status</th></tr>`;
+
+  const impactOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+  const sorted = [...risks.risks].sort((a, b) => (impactOrder[a.impact] || 3) - (impactOrder[b.impact] || 3));
+
+  for (const r of sorted) {
+    const impactClass = r.impact === 'critical' ? 'badge-red' : r.impact === 'high' ? 'badge-red' : r.impact === 'medium' ? 'badge-amber' : 'badge-green';
+    const statusClass = r.status === 'mitigated' ? 'badge-green' : r.status === 'in-progress' ? 'badge-amber' : 'badge-red';
+    html += `<tr>
+      <td><strong>${escHtml(r.title)}</strong></td>
+      <td>${escHtml(r.likelihood || '—')}</td>
+      <td><span class="badge ${impactClass}">${escHtml(r.impact || '—')}</span></td>
+      <td><small>${escHtml(r.mitigation || '—')}</small></td>
+      <td><span class="badge ${statusClass}">${escHtml(r.status || '—')}</span></td>
+    </tr>`;
+  }
+  return html + '</table>';
+}
+
+function renderRegistration(registration) {
+  if (!registration) {
+    return `<h2>Registration Stats</h2>${noDataNote('Registration Manager tool')}`;
+  }
+
+  const summary = registration.summary || {};
+  const categories = registration.categories || [];
+  const dietary = registration.dietary || {};
+  const total = summary.totalRegistered || categories.reduce((s, c) => s + (c.registered || 0), 0);
+  const capacity = summary.totalCapacity || categories.reduce((s, c) => s + (c.capacity || 0), 0);
+  const pct = capacity > 0 ? Math.round(total / capacity * 100) : 0;
+
+  let html = `<h2>Registration Stats</h2>
+<div class="stat-grid">
+  <div class="stat-box">
+    <div class="stat-val">${total.toLocaleString()}</div>
+    <div class="stat-lbl">Registered</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val">${capacity.toLocaleString()}</div>
+    <div class="stat-lbl">Capacity</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val">${pct}%</div>
+    <div class="stat-lbl">Fill Rate</div>
+  </div>
+</div>`;
+
+  if (categories.length > 0) {
+    html += `<table>
+  <tr><th>Ticket Type</th><th>Registered</th><th>Capacity</th><th>Fill %</th></tr>`;
+    for (const c of categories) {
+      const fp = c.capacity > 0 ? Math.round((c.registered || 0) / c.capacity * 100) : 0;
+      html += `<tr><td>${escHtml(c.name)}</td><td>${c.registered || 0}</td><td>${c.capacity || 0}</td><td>${fp}%</td></tr>`;
+    }
+    html += '</table>';
+  }
+
+  if (Object.keys(dietary).length > 0) {
+    const dietItems = Object.entries(dietary).filter(([,v]) => v > 0);
+    if (dietItems.length > 0) {
+      html += `<h3>Dietary Requirements</h3><div class="chip-row">`;
+      for (const [k, v] of dietItems) {
+        html += `<span class="chip">${escHtml(k.charAt(0).toUpperCase() + k.slice(1))}: <strong>${v}</strong></span>`;
+      }
+      html += '</div>';
+    }
+  }
+
+  return html;
+}
+
+function renderExhibitors(exhibitors) {
+  if (!exhibitors || !exhibitors.exhibitors || exhibitors.exhibitors.length === 0) {
+    return `<h2>Exhibitor Directory</h2>${noDataNote('Exhibitor Manager tool')}`;
+  }
+
+  let html = `<h2>Exhibitor Directory</h2>
+<table>
+  <tr><th>Company</th><th>Stand</th><th>Size</th><th>Contact</th><th>Setup</th><th>Notes</th></tr>`;
+
+  for (const ex of exhibitors.exhibitors) {
+    html += `<tr>
+      <td><strong>${escHtml(ex.company)}</strong>${ex.type ? `<br><small>${escHtml(ex.type)}</small>` : ''}</td>
+      <td>${escHtml(ex.stand || '—')}</td>
+      <td>${escHtml(ex.size || '—')}</td>
+      <td>${escHtml(ex.contact || '—')}${ex.contactEmail ? `<br><small>${escHtml(ex.contactEmail)}</small>` : ''}</td>
+      <td>${escHtml(ex.setupTime || '—')}</td>
+      <td><small>${escHtml(ex.notes || '')}</small></td>
+    </tr>`;
+  }
+  return html + '</table>';
+}
+
+function renderComms(comms) {
+  if (!comms || !comms.entries || comms.entries.length === 0) {
+    return `<h2>Communications Plan</h2>${noDataNote('Comms Timeline tool')}`;
+  }
+
+  const sorted = [...comms.entries].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  let html = `<h2>Communications Plan</h2>
+<table>
+  <tr><th>Date</th><th>Communication</th><th>Channel</th><th>Audience</th><th>Status</th></tr>`;
+
+  for (const c of sorted) {
+    const statusClass = c.status === 'sent' ? 'badge-green' : c.status === 'scheduled' ? 'badge-blue' : 'badge-amber';
+    html += `<tr>
+      <td>${escHtml(c.date || '—')}</td>
+      <td>${escHtml(c.title || '—')}</td>
+      <td>${escHtml(c.channel || '—')}</td>
+      <td>${escHtml(c.audience || '—')}</td>
+      <td><span class="badge ${statusClass}">${escHtml(c.status || '—')}</span></td>
+    </tr>`;
+  }
+  return html + '</table>';
+}
+
+function renderTasks(tasks) {
+  if (!tasks || !tasks.tasks || tasks.tasks.length === 0) {
+    return `<h2>Outstanding Tasks</h2>${noDataNote('Ops Tracker tool')}`;
+  }
+
+  // Show only outstanding and in-progress
+  const active = tasks.tasks.filter(t => t.status !== 'complete' && t.status !== 'done');
+  const completed = tasks.tasks.filter(t => t.status === 'complete' || t.status === 'done');
+
+  let html = `<h2>Outstanding Tasks</h2>`;
+
+  if (active.length === 0) {
+    html += `<p style="color:green">✓ All tasks complete. No outstanding items.</p>`;
+  } else {
+    html += `<p><strong>${active.length} outstanding task${active.length !== 1 ? 's' : ''}</strong> (${completed.length} complete)</p>
+<table>
+  <tr><th>Task</th><th>Owner</th><th>Due Date</th><th>Priority</th></tr>`;
+    const sorted = [...active].sort((a, b) => {
+      const pOrder = { high: 0, medium: 1, low: 2 };
+      return (pOrder[a.priority] || 1) - (pOrder[b.priority] || 1);
+    });
+    for (const t of sorted) {
+      const pClass = t.priority === 'high' ? 'badge-red' : t.priority === 'medium' ? 'badge-amber' : 'badge-green';
+      html += `<tr>
+        <td>${escHtml(t.title)}</td>
+        <td>${escHtml(t.owner || '—')}</td>
+        <td>${escHtml(t.due || '—')}</td>
+        <td><span class="badge ${pClass}">${escHtml(t.priority || '—')}</span></td>
+      </tr>`;
+    }
+    html += '</table>';
+  }
+  return html;
+}
+
+function renderContacts(cfg) {
+  let html = `<h2>Key Contacts</h2>
+<table>
+  <tr><th>Role</th><th>Name</th><th>Contact</th></tr>
+  <tr><td>Event Organiser</td><td>${escHtml(cfg.organisingCompany)}</td><td>${escHtml(cfg.contactEmail || '—')}</td></tr>
+  <tr><td>Primary Contact</td><td>${escHtml(cfg.contactName || '—')}</td><td>${escHtml(cfg.contactPhone || '—')}</td></tr>
+  <tr><td>On-Site / Emergency</td><td>Event Team</td><td><strong>${escHtml(cfg.emergencyPhone || cfg.contactPhone || '—')}</strong></td></tr>
+</table>
+<p style="margin-top:10pt"><strong>Emergency Procedures:</strong> In the event of a fire or emergency, follow venue evacuation procedures. Assembly point to be confirmed by venue. Call 999 for emergency services. Notify the primary contact immediately.</p>`;
+  return html;
+}
+
+function renderCustomSection(custom) {
+  return `<h2>${escHtml(custom.name)}</h2>
+<div style="white-space:pre-wrap">${escHtml(custom.content)}</div>`;
+}
+
+// ============================================================
+// LIVE PREVIEW RENDERER — BG.06
+// ============================================================
+function renderPreview() {
+  const page = document.getElementById('preview-page');
+  const countEl = document.getElementById('preview-section-count');
+  const primary = EVENTHIVE_CONFIG.primaryColor || '#6D28D9';
+
+  const title = document.getElementById('brief-title')?.value || state.briefTitle || (EVENTHIVE_CONFIG.eventName + ' Briefing');
+  const recipient = document.getElementById('brief-recipient')?.value || state.briefRecipient || '';
+  const briefDate = document.getElementById('brief-date')?.value || state.briefDate || new Date().toLocaleDateString('en-GB');
+  const version = document.getElementById('brief-version')?.value || state.briefVersion || 'v1.0';
+
+  state.briefTitle = title;
+  state.briefRecipient = recipient;
+  state.briefDate = briefDate;
+  state.briefVersion = version;
+
+  const activeSections = state.activeSections;
+  countEl.textContent = `${activeSections.length} section${activeSections.length !== 1 ? 's' : ''}`;
+
+  if (activeSections.length === 0) {
+    page.innerHTML = `<div style="padding:40px;text-align:center;color:#999">
+      <div style="font-size:48px;margin-bottom:12px">📋</div>
+      <h3 style="color:#666;margin-bottom:8px">No sections selected</h3>
+      <p style="color:#aaa;font-size:12pt">Select an audience preset or toggle sections in the left panel.</p>
+    </div>`;
+    return;
+  }
+
+  // Build the brief header
+  const logoHtml = EVENTHIVE_CONFIG.companyLogo
+    ? `<img src="${escHtml(EVENTHIVE_CONFIG.companyLogo)}" style="height:40px;margin-bottom:8px" alt="Logo">`
+    : `<div style="font-weight:bold;font-size:14pt;margin-bottom:4px">${escHtml(EVENTHIVE_CONFIG.organisingCompany)}</div>`;
+
+  let html = `<div class="brief-header" style="background:${primary};color:#fff;padding:24pt 28pt">
+    ${logoHtml}
+    <h1 style="font-size:22pt;color:#fff;margin-bottom:6pt">${escHtml(title)}</h1>
+    <div class="meta" style="font-size:9pt;opacity:.85;display:grid;grid-template-columns:1fr 1fr;gap:4pt;margin-top:8pt">
+      <div><strong>Event:</strong> ${escHtml(EVENTHIVE_CONFIG.eventName)}</div>
+      <div><strong>Date:</strong> ${escHtml(EVENTHIVE_CONFIG.eventDate || '—')}</div>
+      <div><strong>Venue:</strong> ${escHtml(EVENTHIVE_CONFIG.eventVenue || '—')}</div>
+      <div><strong>Version:</strong> ${escHtml(version)}</div>
+      ${recipient ? `<div><strong>Prepared for:</strong> ${escHtml(recipient)}</div>` : ''}
+      <div><strong>Issued:</strong> ${briefDate ? escHtml(briefDate) : new Date().toLocaleDateString('en-GB')}</div>
+    </div>
+  </div>
+  <div class="brief-section" style="padding:20pt 28pt">`;
+
+  // Table of contents
+  html += `<div class="toc" style="margin:16pt 0;padding:12pt;background:#f5f5ff;border-left:4pt solid ${primary}">
+    <h3 style="color:${primary};margin-bottom:8pt;font-size:11pt">Contents</h3>`;
+  let tocNum = 1;
+  for (const secId of activeSections) {
+    const secDef = SECTION_DEFINITIONS.find(s => s.id === secId);
+    const custom = state.customSections.find(c => c.id === secId);
+    const name = secDef?.name || custom?.name || secId;
+    html += `<div class="toc-item" style="display:flex;justify-content:space-between;padding:3pt 0;border-bottom:1pt dotted #ccc;font-size:10pt">
+      <span>${tocNum}. ${escHtml(name)}</span>
+    </div>`;
+    tocNum++;
+  }
+  html += `</div>`;
+
+  // Render each section
+  for (const secId of activeSections) {
+    html += `<div class="brief-section" style="margin-bottom:24pt">`;
+    html += renderSection(secId);
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+
+  // Footer
+  html += `<div style="padding:12pt 28pt;border-top:1pt solid #e2e2e2;font-size:8pt;color:#999;display:flex;justify-content:space-between">
+    <span>${escHtml(EVENTHIVE_CONFIG.organisingCompany)} · ${escHtml(title)}</span>
+    <span>${version} · Generated ${new Date().toLocaleDateString('en-GB')}</span>
+  </div>`;
+
+  page.innerHTML = html;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  // Set event slug input
+  document.getElementById('event-slug-input').value = state.eventSlug;
+
+  // Set topbar info
+  document.getElementById('topbar-event-name').textContent = EVENTHIVE_CONFIG.eventName || 'My Event';
+  if (EVENTHIVE_CONFIG.eventDate) {
+    document.getElementById('topbar-event-date').textContent = ' · ' + EVENTHIVE_CONFIG.eventDate;
+  }
+  if (EVENTHIVE_CONFIG.eventVenue) {
+    document.getElementById('topbar-event-date').textContent += ' · ' + EVENTHIVE_CONFIG.eventVenue;
+  }
+
+  // Set brief date to today if not set
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('brief-date').value = today;
+
+  // Load saved state
+  const hasSaved = loadState();
+
+  // If no saved state, apply crew preset as default
+  if (!hasSaved) {
+    applyPreset('crew');
+  } else {
+    // Restore UI values
+    document.getElementById('brief-title').value = state.briefTitle || '';
+    document.getElementById('brief-recipient').value = state.briefRecipient || '';
+    document.getElementById('brief-date').value = state.briefDate || today;
+    document.getElementById('brief-version').value = state.briefVersion || 'v1.0';
+
+    // Highlight active preset
+    if (state.activePreset) {
+      document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`preset-${state.activePreset}`)?.classList.add('active');
+    }
+  }
+
+  // Aggregate data from other tools
+  aggregateData();
+
+  // Render everything
+  renderDataSourcesPanel();
+  renderSectionList();
+  renderSavedTemplates();
+  renderPreview();
+
+  // Auto-refresh data every 30 seconds
+  setInterval(() => {
+    aggregateData();
+    renderDataSourcesPanel();
+  }, 30000);
+}
+
+// Run on load
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+{
+    "slug": "briefing-generator",
+    "name": "Briefing Generator",
+    "version": "1.0.0",
+    "description": "Generate professional briefing documents for clients, crew, speakers, sponsors, and exhibitors — automatically populated with live data from your other EventHive tools. Select an audience preset, choose your sections, preview the brief, and export to PDF in seconds.",
+    "category": "operations",
+    "difficulty": "intermediate",
+    "requires_backend": false,
+    "is_published": true,
+    "author": "Visual Hive",
+    "source_repo": "https://github.com/Visual-Hive/eventhive-tool-briefing-generator",
+    "tool_file": "tool.html",
+    "config_schema": {
+        "sections": [
+            {
+                "id": "event",
+                "title": "Event Details",
+                "description": "Set your event details to link with data from other EventHive tools.",
+                "fields": [
+                    {
+                        "id": "eventName",
+                        "type": "text",
+                        "label": "Event Name",
+                        "placeholder": "e.g. TechSummit 2026",
+                        "required": true,
+                        "default": "My Event"
+                    },
+                    {
+                        "id": "eventSlug",
+                        "type": "text",
+                        "label": "Event Slug",
+                        "placeholder": "e.g. techsummit-2026",
+                        "description": "Must match the slug used in all other tools for this event.",
+                        "required": true,
+                        "default": "my-event"
+                    },
+                    {
+                        "id": "eventDate",
+                        "type": "text",
+                        "label": "Event Date(s)",
+                        "placeholder": "e.g. 15–16 September 2026",
+                        "default": ""
+                    },
+                    {
+                        "id": "eventVenue",
+                        "type": "text",
+                        "label": "Venue Name",
+                        "placeholder": "e.g. ExCeL London",
+                        "default": ""
+                    },
+                    {
+                        "id": "eventLocation",
+                        "type": "text",
+                        "label": "Venue Address",
+                        "placeholder": "e.g. Royal Victoria Dock, London E16 1XL",
+                        "default": ""
+                    },
+                    {
+                        "id": "expectedAttendance",
+                        "type": "number",
+                        "label": "Expected Attendance",
+                        "default": 0,
+                        "min": 0
+                    }
+                ]
+            },
+            {
+                "id": "organiser",
+                "title": "Organiser Details",
+                "description": "Your organisation's details appear in the brief header and contact sheet.",
+                "fields": [
+                    {
+                        "id": "organisingCompany",
+                        "type": "text",
+                        "label": "Organising Company",
+                        "placeholder": "e.g. Visual Hive Events",
+                        "default": "My Company"
+                    },
+                    {
+                        "id": "contactName",
+                        "type": "text",
+                        "label": "Primary Contact Name",
+                        "placeholder": "e.g. Jane Smith",
+                        "default": ""
+                    },
+                    {
+                        "id": "contactEmail",
+                        "type": "text",
+                        "label": "Primary Contact Email",
+                        "placeholder": "e.g. jane@company.com",
+                        "default": ""
+                    },
+                    {
+                        "id": "contactPhone",
+                        "type": "text",
+                        "label": "Primary Contact Phone",
+                        "placeholder": "e.g. +44 7700 900000",
+                        "default": ""
+                    },
+                    {
+                        "id": "emergencyPhone",
+                        "type": "text",
+                        "label": "Emergency / On-Site Phone",
+                        "placeholder": "e.g. +44 7700 900001",
+                        "default": ""
+                    }
+                ]
+            },
+            {
+                "id": "branding",
+                "title": "Branding",
+                "description": "Customise the brief's appearance.",
+                "fields": [
+                    {
+                        "id": "primaryColor",
+                        "type": "color",
+                        "label": "Primary Brand Colour",
+                        "default": "#6D28D9"
+                    },
+                    {
+                        "id": "accentColor",
+                        "type": "color",
+                        "label": "Accent Colour",
+                        "default": "#4F46E5"
+                    },
+                    {
+                        "id": "companyLogo",
+                        "type": "text",
+                        "label": "Company Logo URL",
+                        "placeholder": "https://... or leave blank",
+                        "description": "A URL to your logo image. Leave blank to show the company name as text.",
+                        "default": ""
+                    }
+                ]
+            }
+        ]
+    },
+    "default_config": {
+        "eventName": "My Event",
+        "eventSlug": "my-event",
+        "eventDate": "",
+        "eventVenue": "",
+        "eventLocation": "",
+        "expectedAttendance": 0,
+        "organisingCompany": "My Company",
+        "contactName": "",
+        "contactEmail": "",
+        "contactPhone": "",
+        "emergencyPhone": "",
+        "primaryColor": "#6D28D9",
+        "accentColor": "#4F46E5",
+        "companyLogo": ""
+    }
+}
